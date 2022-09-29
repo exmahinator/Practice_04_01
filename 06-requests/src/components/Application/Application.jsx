@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useEffect, useState } from 'react';
 
 import Loader from 'components/Loader/Loader';
 import Gallery from 'components/Gallery/Gallery';
@@ -12,78 +12,51 @@ const STATUSES = {
   error: 'ERROR',
 };
 
-class Application extends Component {
-  state = {
-    images: [],
-    status: STATUSES.idle,
-    count: 0,
-    error: '',
+const Application = () => {
+  const [images, setImages] = useState([]);
+  const [status, setStatus] = useState(STATUSES.idle);
+  const [count, setCount] = useState(0);
+  const [error, setError] = useState('');
+
+  const handleSelect = ({ target: { value } }) => {
+    setCount(value);
+    setStatus(STATUSES.pending);
+    setError('');
   };
 
-  getImagesForGallery = async () => {
-    const { count } = this.state;
-    try {
-      const { data } = await getImages(count);
-
-      this.setState((prevState) => ({
-        status: STATUSES.success,
-        images: [...prevState.images, ...data.message],
-      }));
-    } catch (error) {
-      this.setState({
-        status: STATUSES.error,
-        error: error.message,
-      });
-    } finally {
-      this.setState({ count: 0 });
+  useEffect(() => {
+    if (count !== 0) {
+      async function getImagesForGallery() {
+        try {
+          const { data } = await getImages(count);
+          setStatus(STATUSES.success);
+          setImages((prev) => [...prev, ...data.message]);
+        } catch (error) {
+          setStatus(STATUSES.error);
+          setError(error.message);
+        } finally {
+          setCount(0);
+        }
+      }
+      getImagesForGallery();
     }
-  };
+  }, [count]);
 
-  handleSelect = ({ target: { value } }) => {
-    //     console.log('value :>> ', typeof value);
-    this.setState({
-      count: value,
-      status: STATUSES.pending,
-      error: '',
-    });
-  };
-
-  componentDidUpdate(_, prevState) {
-    const prevCount = prevState.count;
-    const nextCount = this.state.count;
-
-    console.log('componentDidUpdate out');
-    if (nextCount === 0) {
-      return;
-    }
-
-    if (prevCount !== nextCount) {
-      console.log('componentDidUpdate in');
-      this.getImagesForGallery();
-    }
-  }
-
-  render() {
-    const { images, status, count } = this.state;
-    const { handleSelect } = this;
-    return (
-      <>
-        {status === STATUSES.pending && <Loader />}
-        {status === STATUSES.error && <h2>ERROR</h2>}
-        {/* {status === STATUSES.error ? <h2>ERROR</h2>:<Gallery images={images}/>} */}
-        {(status === STATUSES.success ||
-          status === STATUSES.idle) && (
-          <SelectCounty
-            handleSelect={handleSelect}
-            value={count}
-          />
-        )}
-        {/* {status === STATUSES.success && ( */}
-        <Gallery images={images} />
-        {/* )} */}
-      </>
-    );
-  }
-}
+  return (
+    <>
+      {status === STATUSES.pending && <Loader />}
+      {status === STATUSES.error && <h2>ERROR</h2>}
+      {status === STATUSES.error && <h2>{error}</h2>}
+      {(status === STATUSES.success ||
+        status === STATUSES.idle) && (
+        <SelectCounty
+          handleSelect={handleSelect}
+          value={count}
+        />
+      )}
+      <Gallery images={images} />
+    </>
+  );
+};
 
 export default Application;
